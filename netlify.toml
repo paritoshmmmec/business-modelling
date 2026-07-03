@@ -4,17 +4,24 @@
   publish = "."
   command = ""
 
-# Long-cache the immutable JS/CSS assets; keep HTML always-fresh so new
-# deploys are picked up immediately.
+# Filenames are NOT fingerprinted (no build step), so we must revalidate every
+# asset on each load — otherwise a stale cached app.js renders the new HTML's
+# empty controls and new deploys stay invisible for up to a day. ETag makes
+# revalidation cheap (304 when unchanged) while picking up deploys immediately.
 [[headers]]
   for = "/js/*"
   [headers.values]
-    Cache-Control = "public, max-age=86400"
+    Cache-Control = "public, max-age=0, must-revalidate"
 
 [[headers]]
   for = "/css/*"
   [headers.values]
-    Cache-Control = "public, max-age=86400"
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/domains/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
 
 [[headers]]
   for = "/*.html"
