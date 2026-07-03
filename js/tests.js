@@ -126,6 +126,14 @@
     ok(Fmt.currency(1234567, 'USD') === '$1,234,567', r, 'got ' + Fmt.currency(1234567, 'USD'));
     ok(Fmt.currency(-500, 'EUR') === '-€500', r, 'got ' + Fmt.currency(-500, 'EUR'));
   });
+  test('currencyReadable collapses ≥1M to M/B', function (r) {
+    ok(Fmt.currencyReadable(240000000, 'USD') === '$240M', r, 'got ' + Fmt.currencyReadable(240000000, 'USD'));
+    ok(Fmt.currencyReadable(21200000000, 'USD') === '$21.2B', r, 'got ' + Fmt.currencyReadable(21200000000, 'USD'));
+    ok(Fmt.currencyReadable(-171581746, 'USD') === '-$171.6M', r, 'got ' + Fmt.currencyReadable(-171581746, 'USD'));
+    // below 1,000,000 stays fully written out
+    ok(Fmt.currencyReadable(999999, 'USD') === '$999,999', r, 'got ' + Fmt.currencyReadable(999999, 'USD'));
+    ok(Fmt.currencyReadable(11680000, 'USD') === '$11.7M', r, 'got ' + Fmt.currencyReadable(11680000, 'USD'));
+  });
   test('percent formats', function (r) {
     ok(Fmt.percent(0.153, 1) === '15.3%', r, 'got ' + Fmt.percent(0.153, 1));
     ok(Fmt.percent(Infinity) === '—', r, 'infinite → dash');

@@ -61,6 +61,15 @@
     return sign + sym + abbreviate(Math.abs(n), decimals);
   }
 
+  // Readable currency: full grouped digits below 1,000,000, but collapse to
+  // M / B / T above that so headline figures stay scannable ($240M, $21.2B).
+  // (abbreviate() alone would also shrink thousands to "K", which we don't want.)
+  function currencyReadable(n, code, decimals) {
+    if (n == null || isNaN(n)) return '—';
+    if (Math.abs(n) < 1e6) return currency(n, code, 0);
+    return currencyShort(n, code, decimals == null ? 1 : decimals);
+  }
+
   function percent(n, decimals) {
     if (n == null || isNaN(n) || !isFinite(n)) return '—';
     var d = decimals == null ? 1 : decimals;
@@ -101,6 +110,7 @@
     abbreviate: abbreviate,
     currency: currency,
     currencyShort: currencyShort,
+    currencyReadable: currencyReadable,
     currencySymbol: currencySymbol,
     percent: percent,
     number: number,

@@ -186,6 +186,29 @@ select#currency-select, .input-select {
 }
 .field-help:hover { border-color: var(--accent); color: var(--accent); }
 
+/* Reliable CSS tooltip (native title= is flaky: slow, clipped, no touch).
+   Any element with [data-tip] shows its text on hover or keyboard focus. */
+[data-tip] { position: relative; }
+[data-tip]:hover, [data-tip]:focus { outline: none; }
+[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%);
+  min-width: 160px; max-width: 260px; width: max-content;
+  background: var(--bg-elev-2); color: var(--text); text-align: left;
+  font-size: 12px; font-weight: 400; line-height: 1.4; text-transform: none; letter-spacing: normal;
+  padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  opacity: 0; visibility: hidden; transition: opacity 0.12s ease; z-index: 50;
+  pointer-events: none; white-space: normal;
+}
+[data-tip]::before {
+  content: ''; position: absolute; left: 50%; bottom: calc(100% + 3px); transform: translateX(-50%);
+  border: 5px solid transparent; border-top-color: var(--border);
+  opacity: 0; visibility: hidden; transition: opacity 0.12s ease; z-index: 51;
+}
+[data-tip]:hover::after, [data-tip]:focus::after,
+[data-tip]:hover::before, [data-tip]:focus::before { opacity: 1; visibility: visible; }
+
 .input-box { display: flex; align-items: stretch; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; background: var(--bg-elev-2); }
 .input-box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
 .input-affix { display: grid; place-items: center; padding: 0 8px; font-size: 12px; color: var(--text-faint); background: rgba(255,255,255,0.02); }

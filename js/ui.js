@@ -133,7 +133,8 @@
     labelRow.appendChild(label);
     if (f.help) {
       var help = el('span', 'field-help', '?');
-      help.title = f.help;
+      help.setAttribute('data-tip', f.help);
+      help.setAttribute('tabindex', '0'); // focusable so the tip shows on touch/keyboard
       labelRow.appendChild(help);
     }
     row.appendChild(labelRow);
@@ -256,13 +257,13 @@
     // too. `term`/`termHelp` are optional — omit for self-explanatory cards.
     var cards = [
       { label: 'Money to build it', term: 'Capex', termHelp: 'Capital expenditure — the total upfront cost to build before it earns anything.',
-        value: F.currency(k.totalCapex, cur), tone: 'neutral',
-        sub: k.debt > 0 ? F.currency(k.equity, cur) + ' your cash · ' + F.currency(k.debt, cur) + ' borrowed' : 'all your own cash' },
+        value: F.currencyReadable(k.totalCapex, cur), tone: 'neutral',
+        sub: k.debt > 0 ? F.currencyReadable(k.equity, cur) + ' your cash · ' + F.currencyReadable(k.debt, cur) + ' borrowed' : 'all your own cash' },
       { label: 'Money coming in / year', term: 'Revenue', termHelp: 'Total sales per year once the business is fully up and running.',
-        value: F.currency(k.steadyRevenue, cur), tone: 'neutral',
-        sub: 'first year: ' + F.currency(k.year1Revenue, cur) },
+        value: F.currencyReadable(k.steadyRevenue, cur), tone: 'neutral',
+        sub: 'first year: ' + F.currencyReadable(k.year1Revenue, cur) },
       { label: 'Money you keep / year', term: 'Net profit', termHelp: 'What\'s left each year after all costs, loan interest and tax.',
-        value: F.currency(k.steadyNetIncome, cur), tone: k.steadyNetIncome >= 0 ? 'good' : 'bad',
+        value: F.currencyReadable(k.steadyNetIncome, cur), tone: k.steadyNetIncome >= 0 ? 'good' : 'bad',
         sub: F.percent(k.steadyNetMargin) + ' of every dollar of sales' },
       { label: 'Profit before the big deductions', term: 'EBITDA margin', termHelp: 'Operating profitability before loan interest, tax and wear-and-tear (depreciation).',
         value: F.percent(k.steadyEbitdaMargin), tone: k.steadyEbitdaMargin >= 0 ? 'good' : 'bad',
@@ -274,7 +275,7 @@
         value: k.irrProject == null ? '—' : F.percent(k.irrProject), tone: irrTone(k.irrProject, k.discountRate),
         sub: 'beats your target of ' + F.percent(k.discountRate) + '?' },
       { label: 'Value created after all costs', term: 'NPV', termHelp: 'Net present value — profit over ' + result.years + ' years in today\'s money. Above zero means it\'s worth doing.',
-        value: F.currency(k.npvProject, cur), tone: k.npvProject >= 0 ? 'good' : 'bad',
+        value: F.currencyReadable(k.npvProject, cur), tone: k.npvProject >= 0 ? 'good' : 'bad',
         sub: 'in today\'s money, over ' + result.years + ' years' },
       { label: 'Total return over ' + result.years + ' years', term: 'ROI', termHelp: 'Return on investment — total profit compared with the cash you put in.',
         value: k.roi == null ? '—' : F.percent(k.roi), tone: (k.roi || 0) >= 0 ? 'good' : 'bad',
@@ -283,7 +284,7 @@
     var grid = el('div', 'kpi-grid');
     cards.forEach(function (c) {
       var card = el('div', 'kpi-card tone-' + c.tone);
-      var term = c.term ? '<span class="kpi-term" title="' + escapeAttr(c.termHelp || '') + '">' + c.term + '</span>' : '';
+      var term = c.term ? '<span class="kpi-term" tabindex="0" data-tip="' + escapeAttr(c.termHelp || '') + '">' + c.term + '</span>' : '';
       card.innerHTML = '<div class="kpi-label-row"><span class="kpi-label">' + c.label + '</span>' + term + '</div>' +
         '<div class="kpi-value">' + c.value + '</div>' +
         '<div class="kpi-sub">' + (c.sub || '') + '</div>';
@@ -301,7 +302,7 @@
       var item = d[key];
       var chip = el('div', 'derived-chip');
       chip.innerHTML = '<span class="derived-value">' + item.value + '</span><span class="derived-label">' + item.label + '</span>';
-      if (item.help) chip.title = item.help;
+      if (item.help) { chip.setAttribute('data-tip', item.help); chip.setAttribute('tabindex', '0'); }
       wrap.appendChild(chip);
     });
     return wrap;
@@ -370,17 +371,17 @@
     var cur = result.currency;
     var rows = [
       ['Utilization', function (r) { return F.percent(r.ramp); }],
-      ['Revenue', function (r) { return F.currency(r.revenue, cur); }],
-      ['Operating expenses', function (r) { return '(' + F.currency(r.opex, cur) + ')'; }],
-      ['EBITDA', function (r) { return F.currency(r.ebitda, cur); }],
-      ['Depreciation', function (r) { return '(' + F.currency(r.depreciation, cur) + ')'; }],
-      ['EBIT', function (r) { return F.currency(r.ebit, cur); }],
-      ['Interest', function (r) { return '(' + F.currency(r.interest, cur) + ')'; }],
-      ['Pre-tax profit', function (r) { return F.currency(r.ebt, cur); }],
-      ['Tax', function (r) { return '(' + F.currency(r.tax, cur) + ')'; }],
-      ['Net profit', function (r) { return F.currency(r.netIncome, cur); }],
+      ['Revenue', function (r) { return F.currencyReadable(r.revenue, cur); }],
+      ['Operating expenses', function (r) { return '(' + F.currencyReadable(r.opex, cur) + ')'; }],
+      ['EBITDA', function (r) { return F.currencyReadable(r.ebitda, cur); }],
+      ['Depreciation', function (r) { return '(' + F.currencyReadable(r.depreciation, cur) + ')'; }],
+      ['EBIT', function (r) { return F.currencyReadable(r.ebit, cur); }],
+      ['Interest', function (r) { return '(' + F.currencyReadable(r.interest, cur) + ')'; }],
+      ['Pre-tax profit', function (r) { return F.currencyReadable(r.ebt, cur); }],
+      ['Tax', function (r) { return '(' + F.currencyReadable(r.tax, cur) + ')'; }],
+      ['Net profit', function (r) { return F.currencyReadable(r.netIncome, cur); }],
       ['Net margin', function (r) { return F.percent(r.netMargin); }],
-      ['Cumulative cash flow', function (r) { return F.currency(r.cumProjectFCF, cur); }]
+      ['Cumulative cash flow', function (r) { return F.currencyReadable(r.cumProjectFCF, cur); }]
     ];
     var emphasize = { 'EBITDA': 1, 'Net profit': 1, 'Cumulative cash flow': 1 };
 
