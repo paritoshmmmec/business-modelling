@@ -255,6 +255,60 @@
   });
 
   // ===================================================================
+  //  SPACE DATACENTER DOMAIN
+  // ===================================================================
+  group('Space DC domain: all scenarios compute');
+  var sdc = global.SPACEDC_DOMAIN;
+  function sdcDefaults() {
+    var app = new global.UI.App(sdc, null);
+    return app.defaults();
+  }
+  sdc.scenarios.forEach(function (sc) {
+    test('scenario "' + sc.id + '" produces a valid model', function (r) {
+      var inputs = sdcDefaults();
+      inputs.currency = 'USD';
+      var model = sdc.compute(inputs, sc.id);
+      ok(model.capexItems && model.capexItems.length > 0, r, 'has capex');
+      ok(model.revenueItems && model.revenueItems.length > 0, r, 'has revenue');
+      ok(model.ramp && model.ramp.length === model.years, r, 'ramp length = years');
+      var res = Engine.project(model);
+      ok(res.perYear.length === model.years, r, 'projects all years');
+      ok(isFinite(res.kpis.totalCapex) && res.kpis.totalCapex > 0, r, 'capex finite>0');
+      ok(isFinite(res.kpis.steadyRevenue), r, 'revenue finite');
+      ok(isFinite(res.kpis.npvProject), r, 'npv finite');
+      ok(res.derived && Object.keys(res.derived).length > 0, r, 'has derived metrics');
+    });
+  });
+  test('orbital-dc: no energy opex (free solar)', function (r) {
+    var model = sdc.compute(sdcDefaults(), 'orbital-dc');
+    var hasEnergy = model.opexItems.some(function (i) { return /energy|power/i.test(i.label); });
+    ok(!hasEnergy, r, 'no energy/power opex line in orbit');
+  });
+  test('orbital-dc: cheaper launch → higher NPV', function (r) {
+    var lo = sdcDefaults(); lo.launchCostPerKg = 200;
+    var hi = sdcDefaults(); hi.launchCostPerKg = 2900;
+    var rlo = Engine.project(sdc.compute(lo, 'orbital-dc'));
+    var rhi = Engine.project(sdc.compute(hi, 'orbital-dc'));
+    ok(rlo.kpis.npvProject > rhi.kpis.npvProject, r, 'lower $/kg → better NPV');
+    ok(rhi.totalCapex > rlo.totalCapex, r, 'higher $/kg → more capex');
+  });
+  test('spacex: $/kg derived = price ÷ payload', function (r) {
+    var inputs = sdcDefaults();
+    inputs.pricePerLaunch = 60000000;
+    inputs.payloadPerLaunchKg = 20000;
+    var model = sdc.compute(inputs, 'spacex');
+    // 60M / 20000 = $3,000/kg
+    ok(/3,000/.test(model.derived.dollarKg.value), r, 'got ' + model.derived.dollarKg.value);
+  });
+  test('rocketlab: adding Neutron raises revenue', function (r) {
+    var noN = sdcDefaults(); noN.neutronPerYear = 0;
+    var withN = sdcDefaults(); withN.neutronPerYear = 8;
+    var rNo = Engine.project(sdc.compute(noN, 'rocketlab'));
+    var rWith = Engine.project(sdc.compute(withN, 'rocketlab'));
+    ok(rWith.kpis.steadyRevenue > rNo.kpis.steadyRevenue, r, 'Neutron adds revenue');
+  });
+
+  // ===================================================================
   //  RENDER / REPORT
   // ===================================================================
   function report() {

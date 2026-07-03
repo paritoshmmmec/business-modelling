@@ -48,7 +48,7 @@
     var r = app.lastResult;
     var cur = r.currency;
     var lines = [];
-    lines.push(['Datacenter model — ' + app.scenarioId].join(','));
+    lines.push([app.config.name + ' model — ' + app.scenarioId].join(','));
     lines.push([]);
     var header = ['Metric'].concat(r.perYear.map(function (y) { return 'Year ' + y.year; }));
     lines.push(header.join(','));
@@ -77,7 +77,7 @@
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
     a.href = url;
-    a.download = 'datacenter-' + app.scenarioId + '-model.csv';
+    a.download = app.config.id + '-' + app.scenarioId + '-model.csv';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -108,6 +108,25 @@
     t.classList.add('show');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2600);
+  }
+
+  // ---- domain selector ---------------------------------------------------
+  // Lists every registered domain; switching navigates to ?domain=<id> and
+  // reboots. We drop the hash so the query param wins over any saved state.
+  function buildDomainSelect(activeId) {
+    var sel = qs('domain-select');
+    if (!sel) return;
+    var domains = global.DOMAINS || {};
+    Object.keys(domains).forEach(function (id) {
+      var o = document.createElement('option');
+      o.value = id;
+      o.textContent = domains[id].name;
+      if (id === activeId) o.selected = true;
+      sel.appendChild(o);
+    });
+    sel.addEventListener('change', function () {
+      location.href = location.pathname + '?domain=' + encodeURIComponent(sel.value);
+    });
   }
 
   // ---- currency selector -------------------------------------------------
@@ -143,6 +162,9 @@
     app.setInputs(initialInputs);
     if (!app.inputs.currency) app.inputs.currency = config.currency;
     if (saved && saved.s) app.scenarioId = saved.s;
+
+    // domain select reflects the active domain
+    buildDomainSelect(config.id);
 
     // currency select reflects state
     buildCurrencySelect();

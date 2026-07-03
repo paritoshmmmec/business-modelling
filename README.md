@@ -1,9 +1,12 @@
 # Business Modelling
 
 Interactive, **client-side-only** financial models for capital-intensive
-businesses. The first domain is a **datacenter** cost/profit calculator with
-four selectable business models; the code is a small, config-driven framework
-so new domains are mostly a config file.
+businesses. Two domains ship today — a **datacenter** cost/profit calculator
+(four terrestrial business models) and a **space datacenter** model (orbital
+data centers plus the SpaceX / Rocket Lab launch businesses they ride on).
+Switch between them with the **Model** selector in the header (or
+`index.html?domain=<id>`). The code is a small, config-driven framework so new
+domains are mostly a config file.
 
 Open `index.html` in any browser — no build step, no server, nothing is sent
 anywhere. All math runs locally.
@@ -37,6 +40,21 @@ hall).
 Extras: **currency selector**, **CSV export**, and a **Share** button that packs
 all your inputs into the URL so a link reproduces the exact model.
 
+## The space datacenter model
+
+Pick a scenario from the top of the sidebar:
+
+| Scenario | What it models | Revenue driver |
+|----------|----------------|----------------|
+| **Orbital data center** | Solar-powered GPUs in orbit; capex is launch-dominated, so economics track $/kg to LEO | GPU-hours sold |
+| **SpaceX (launch)** | Merchant launch provider — Falcon 9 today, Starship target (launch services only) | launches × price |
+| **Rocket Lab** | Electron + Neutron launch plus the Space Systems segment | launches × price + systems |
+
+The orbital DC and the two launch businesses are linked: the same **$/kg to
+orbit** that SpaceX and Rocket Lab sell is the swing variable that decides whether
+an orbital data center pencils out (Google's 2025 study put the break-even near
+~$200/kg). Presets are calibrated to 2025–26 public figures and are estimates.
+
 ## Architecture
 
 Plain ES5-style global scripts loaded with `<script>` tags — deliberately **no
@@ -60,6 +78,7 @@ js/app.js               boot, currency, URL-state sharing, CSV export
 js/tests.js             assertion suite (runs in browser or Node)
 
 domains/datacenter.js   the datacenter domain: 4 scenarios + field defs
+domains/spacedc.js      the space domain: orbital DC + SpaceX + Rocket Lab
 ```
 
 The dependency direction is one-way: `format → finance → engine → charts/ui →

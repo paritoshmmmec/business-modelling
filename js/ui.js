@@ -251,20 +251,40 @@
   App.prototype.renderKpis = function (result) {
     var cur = result.currency;
     var k = result.kpis;
+    // Each card leads with a plain-English label a non-expert can read; the
+    // finance term is a small hover-explained chip, and the sub-line is plain
+    // too. `term`/`termHelp` are optional — omit for self-explanatory cards.
     var cards = [
-      { label: 'Total investment (capex)', value: F.currency(k.totalCapex, cur), tone: 'neutral', sub: k.debt > 0 ? F.currency(k.equity, cur) + ' equity · ' + F.currency(k.debt, cur) + ' debt' : 'all equity' },
-      { label: 'Steady-state revenue / yr', value: F.currency(k.steadyRevenue, cur), tone: 'neutral', sub: 'Year 1: ' + F.currency(k.year1Revenue, cur) },
-      { label: 'Steady-state net profit / yr', value: F.currency(k.steadyNetIncome, cur), tone: k.steadyNetIncome >= 0 ? 'good' : 'bad', sub: F.percent(k.steadyNetMargin) + ' net margin' },
-      { label: 'EBITDA margin (steady)', value: F.percent(k.steadyEbitdaMargin), tone: k.steadyEbitdaMargin >= 0 ? 'good' : 'bad', sub: 'operating profitability' },
-      { label: 'Payback period', value: F.years(k.paybackProject), tone: isFinite(k.paybackProject) && k.paybackProject <= result.years ? 'good' : 'warn', sub: 'discounted: ' + F.years(k.discountedPayback) },
-      { label: 'Project IRR', value: k.irrProject == null ? '—' : F.percent(k.irrProject), tone: irrTone(k.irrProject, k.discountRate), sub: 'hurdle ' + F.percent(k.discountRate) },
-      { label: 'NPV @ ' + F.percent(k.discountRate), value: F.currency(k.npvProject, cur), tone: k.npvProject >= 0 ? 'good' : 'bad', sub: result.years + '-yr, unlevered' },
-      { label: 'ROI over ' + result.years + ' yrs', value: k.roi == null ? '—' : F.percent(k.roi), tone: (k.roi || 0) >= 0 ? 'good' : 'bad', sub: 'cum. profit ÷ equity' }
+      { label: 'Money to build it', term: 'Capex', termHelp: 'Capital expenditure — the total upfront cost to build before it earns anything.',
+        value: F.currency(k.totalCapex, cur), tone: 'neutral',
+        sub: k.debt > 0 ? F.currency(k.equity, cur) + ' your cash · ' + F.currency(k.debt, cur) + ' borrowed' : 'all your own cash' },
+      { label: 'Money coming in / year', term: 'Revenue', termHelp: 'Total sales per year once the business is fully up and running.',
+        value: F.currency(k.steadyRevenue, cur), tone: 'neutral',
+        sub: 'first year: ' + F.currency(k.year1Revenue, cur) },
+      { label: 'Money you keep / year', term: 'Net profit', termHelp: 'What\'s left each year after all costs, loan interest and tax.',
+        value: F.currency(k.steadyNetIncome, cur), tone: k.steadyNetIncome >= 0 ? 'good' : 'bad',
+        sub: F.percent(k.steadyNetMargin) + ' of every dollar of sales' },
+      { label: 'Profit before the big deductions', term: 'EBITDA margin', termHelp: 'Operating profitability before loan interest, tax and wear-and-tear (depreciation).',
+        value: F.percent(k.steadyEbitdaMargin), tone: k.steadyEbitdaMargin >= 0 ? 'good' : 'bad',
+        sub: 'the raw earning power of the operation' },
+      { label: 'Time to earn it back', term: 'Payback', termHelp: 'How long until the cash it throws off has repaid the upfront build cost.',
+        value: F.years(k.paybackProject), tone: isFinite(k.paybackProject) && k.paybackProject <= result.years ? 'good' : 'warn',
+        sub: 'allowing for inflation: ' + F.years(k.discountedPayback) },
+      { label: 'Yearly return on the money', term: 'IRR', termHelp: 'Internal rate of return — the effective interest rate the project earns per year.',
+        value: k.irrProject == null ? '—' : F.percent(k.irrProject), tone: irrTone(k.irrProject, k.discountRate),
+        sub: 'beats your target of ' + F.percent(k.discountRate) + '?' },
+      { label: 'Value created after all costs', term: 'NPV', termHelp: 'Net present value — profit over ' + result.years + ' years in today\'s money. Above zero means it\'s worth doing.',
+        value: F.currency(k.npvProject, cur), tone: k.npvProject >= 0 ? 'good' : 'bad',
+        sub: 'in today\'s money, over ' + result.years + ' years' },
+      { label: 'Total return over ' + result.years + ' years', term: 'ROI', termHelp: 'Return on investment — total profit compared with the cash you put in.',
+        value: k.roi == null ? '—' : F.percent(k.roi), tone: (k.roi || 0) >= 0 ? 'good' : 'bad',
+        sub: 'total profit vs. the cash you put in' }
     ];
     var grid = el('div', 'kpi-grid');
     cards.forEach(function (c) {
       var card = el('div', 'kpi-card tone-' + c.tone);
-      card.innerHTML = '<div class="kpi-label">' + c.label + '</div>' +
+      var term = c.term ? '<span class="kpi-term" title="' + escapeAttr(c.termHelp || '') + '">' + c.term + '</span>' : '';
+      card.innerHTML = '<div class="kpi-label-row"><span class="kpi-label">' + c.label + '</span>' + term + '</div>' +
         '<div class="kpi-value">' + c.value + '</div>' +
         '<div class="kpi-sub">' + (c.sub || '') + '</div>';
       grid.appendChild(card);
@@ -467,6 +487,10 @@
   function round(v, dp) {
     var m = Math.pow(10, dp || 0);
     return Math.round(v * m) / m;
+  }
+  // Escape a string for safe use inside a double-quoted HTML attribute.
+  function escapeAttr(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
   function irrTone(irr, hurdle) {
     if (irr == null) return 'neutral';

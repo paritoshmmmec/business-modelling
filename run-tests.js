@@ -17,6 +17,7 @@ const files = [
   'js/charts.js',
   'js/ui.js',
   'domains/datacenter.js',
+  'domains/spacedc.js',
   'js/tests.js'
 ];
 
