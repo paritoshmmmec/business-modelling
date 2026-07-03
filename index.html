@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Datacenter Business Model — Cost, Revenue & Profit Calculator</title>
+  <meta name="description" content="Interactive datacenter financial model: capex, opex, revenue, profit, NPV, IRR and payback across colocation, cloud, enterprise and wholesale business models." />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%234f8cff'/%3E%3Ctext x='50' y='70' font-size='58' text-anchor='middle' fill='white'%3E%E2%9A%A1%3C/text%3E%3C/svg%3E" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <div class="app-logo">⚡</div>
+      <div>
+        <h1 class="app-title" id="app-title">Datacenter model</h1>
+        <p class="app-tagline" id="app-tagline">Model space, power, cost, revenue and profit.</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <label class="currency-wrap">Currency
+        <select id="currency-select" aria-label="Currency"></select>
+      </label>
+      <button class="btn" id="btn-reset" title="Reset all inputs to defaults">↺ Reset</button>
+      <button class="btn" id="btn-export" title="Download the year-by-year model as CSV">⭳ CSV</button>
+      <button class="btn btn-primary" id="btn-share" title="Copy a shareable link that restores these inputs">🔗 Share</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div id="controls"><!-- form rendered by ui.js --></div>
+    </aside>
+    <main class="main">
+      <div id="results"><!-- results rendered by ui.js --></div>
+    </main>
+  </div>
+
+  <footer class="footer">
+    Client-side model — all math runs in your browser, nothing is sent anywhere.
+    Figures are estimates for planning; validate with real quotes before committing capital.
+    &nbsp;·&nbsp; <a href="tests.html">Run tests</a>
+  </footer>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <!-- Core libraries (plain globals, no build step, works from file://) -->
+  <script src="js/format.js"></script>
+  <script src="js/finance.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/ui.js"></script>
+  <!-- Domains -->
+  <script src="domains/datacenter.js"></script>
+  <!-- App boot -->
+  <script src="js/app.js"></script>
+</body>
+</html>

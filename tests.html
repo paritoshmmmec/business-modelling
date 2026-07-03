@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tests — Business Modelling</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    .test-wrap { max-width: 900px; margin: 0 auto; padding: 24px; }
+    .test-summary { font-size: 20px; font-weight: 700; margin: 16px 0; }
+    .test-summary.pass { color: var(--good); }
+    .test-summary.fail { color: var(--bad); }
+    .test-row { display: flex; gap: 10px; align-items: baseline; padding: 7px 12px; border-bottom: 1px solid var(--border-soft); font-size: 13px; }
+    .test-row .badge { font-weight: 700; font-size: 11px; padding: 2px 7px; border-radius: 4px; flex-shrink: 0; }
+    .test-row.ok .badge { background: var(--good-soft); color: var(--good); }
+    .test-row.no .badge { background: var(--bad-soft); color: var(--bad); }
+    .test-name { flex: 1; }
+    .test-detail { color: var(--text-faint); font-family: var(--mono); font-size: 12px; }
+    .group-title { font-size: 14px; font-weight: 700; margin: 20px 0 6px; color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="test-wrap">
+    <h1>Business Modelling — test suite</h1>
+    <p class="app-tagline">Validates the pure finance math and the datacenter domain compute. <a href="index.html">← Back to app</a></p>
+    <div id="summary"></div>
+    <div id="results"></div>
+  </div>
+
+  <script src="js/format.js"></script>
+  <script src="js/finance.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="domains/datacenter.js"></script>
+  <script src="js/tests.js"></script>
+</body>
+</html>

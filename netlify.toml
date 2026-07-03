@@ -1,0 +1,22 @@
+# Netlify config. This is a static, client-side-only site — no build step.
+# The repo root is served directly; index.html is the entry point.
+[build]
+  publish = "."
+  command = ""
+
+# Long-cache the immutable JS/CSS assets; keep HTML always-fresh so new
+# deploys are picked up immediately.
+[[headers]]
+  for = "/js/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "/css/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
