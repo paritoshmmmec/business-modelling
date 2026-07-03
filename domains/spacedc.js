@@ -347,7 +347,7 @@
   var orbitalUtilization = {
     id: 'orbital-util', label: 'Utilization & maintenance', icon: '📈', scenarios: ['orbital-dc'],
     fields: [
-      { key: 'soldUtilization', label: 'Billed utilization', type: 'percent', default: 0.8, min: 0, max: 1, step: 1, help: 'Steady-state fraction of available GPU-hours billed' },
+      { key: 'soldUtilization', label: 'Billed utilization', type: 'range', percent: true, default: 0.8, min: 0, max: 1, step: 0.01, help: 'Steady-state fraction of available GPU-hours billed' },
       { key: 'peakUtilization', label: 'Peak availability', type: 'percent', default: 0.9, min: 0, max: 1, step: 1, help: 'Best-case usable capacity after eclipse, pointing and thermal duty-cycle limits' },
       { key: 'degradationRate', label: 'Annual degradation', type: 'percent', default: 0.06, min: 0, max: 0.5, step: 0.5, help: 'Annual capacity loss after deployment from solar degradation and hardware failures' },
       { key: 'replenish', label: 'Replenishment', type: 'select', default: 0, options: [{ value: 0, label: 'No - capacity decays' }, { value: 1, label: 'Yes - launch replacements' }], help: 'Whether to add recurring replacement-launch opex to hold capacity flat' },
