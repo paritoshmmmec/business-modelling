@@ -42,6 +42,34 @@
     return curve;
   }
 
+  // Availability curve for orbital hardware: ramp up to `peak` over `fillMonths`,
+  // then (unless replenished) decay at `decayRate`/yr — solar-array degradation
+  // plus GPU failures that can't be repaired in orbit. With `replenish` true,
+  // capacity is held flat at `peak` (you launch replacements — priced as opex
+  // elsewhere) instead of decaying. Returns a per-year availability fraction.
+  function availabilityCurve(years, fillMonths, peak, decayRate, replenish) {
+    var curve = [];
+    var peakYear = Math.max(1, Math.ceil((fillMonths || 0) / 12)); // year full deployment is reached
+    for (var y = 1; y <= years; y++) {
+      var startM = (y - 1) * 12;
+      var acc = 0;
+      for (var m = 0; m < 12; m++) {
+        var monthIndex = startM + m + 0.5; // mid-month
+        var ramp = fillMonths <= 0 ? peak : Math.min(peak, peak * monthIndex / fillMonths);
+        acc += ramp;
+      }
+      var avgRamp = acc / 12;
+      if (replenish || decayRate <= 0) {
+        curve.push(avgRamp);
+      } else {
+        // Decay compounds only after the fleet is fully deployed.
+        var yearsSincePeak = Math.max(0, y - peakYear);
+        curve.push(avgRamp * Math.pow(1 - decayRate, yearsSincePeak));
+      }
+    }
+    return curve;
+  }
+
   function num(inputs, key, dflt) {
     var v = inputs[key];
     return (v == null || isNaN(v)) ? (dflt || 0) : Number(v);
@@ -108,39 +136,66 @@
     var hoursYear = 8760;
     var computeRevenue = totalUnits * pricePerUnitHour * hoursYear * soldUtilization;
 
+    // Availability: fleet ramps to an adjustable PEAK (never truly 100% —
+    // pointing, eclipse, thermal duty-cycle), then degrades unless replenished.
+    var peakUtilization = Math.max(0, Math.min(1, num(inputs, 'peakUtilization', 0.9)));
+    var degradationRate = Math.max(0, Math.min(0.95, num(inputs, 'degradationRate', 0.06))); // per year, post-peak
+    var replenish = num(inputs, 'replenish', 0) ? true : false;
+    var fillMonths = num(inputs, 'fillMonths', 18);
+
     // Opex: mission/ground ops, insurance (% of capex/yr), station-keeping.
     // Deliberately NO energy line — free solar is the space advantage.
     var opsStaff = num(inputs, 'opsStaffCount', 20) * num(inputs, 'costPerStaff', 160000);
     var insurance = totalCapex * num(inputs, 'insurancePct', 0.03);
     var stationKeeping = num(inputs, 'stationKeepingAnnual', 2000000);
     var bandwidth = num(inputs, 'bandwidthAnnual', 5000000);
+    var maintenanceOverheadPct = num(inputs, 'maintenanceOverheadPct', 0.02);
+    var maintenanceOverhead = totalCapex * maintenanceOverheadPct;
 
     var opexItems = [
       { label: 'Mission & ground operations', amount: opsStaff, capacityLinked: false, growth: 0.03 },
       { label: 'Insurance', amount: insurance, capacityLinked: false, growth: 0.02 },
+      { label: 'Maintenance overhead', amount: maintenanceOverhead, capacityLinked: false, growth: 0.02 },
       { label: 'Station-keeping & propellant', amount: stationKeeping, capacityLinked: true, growth: 0.02 }
     ];
     if (bandwidth > 0) opexItems.push({ label: 'Downlink / bandwidth', amount: bandwidth, capacityLinked: true, growth: 0 });
+    // Replenishment: to HOLD capacity against decay you must re-launch failed
+    // hardware every year. Cost ≈ decayRate × (launch + compute) capex — the
+    // fraction of the fleet you replace annually. Fixed (not capacity-linked):
+    // it's the price of keeping availability flat.
+    if (replenish && degradationRate > 0) {
+      var replenishCost = degradationRate * (launchCapex + computeCapex);
+      opexItems.push({ label: 'Replenishment (replacement launches)', amount: replenishCost, capacityLinked: false, growth: 0.0 });
+    }
 
     m.capexItems = capexItems;
     m.opexItems = opexItems;
     m.revenueItems = [
       { label: 'Compute (GPU-hours)', amount: computeRevenue, growth: num(inputs, 'priceGrowth', 0) }
     ];
-    m.ramp = rampCurve(m.years, num(inputs, 'fillMonths', 18), 1.0);
+    m.ramp = availabilityCurve(m.years, fillMonths, peakUtilization, degradationRate, replenish);
     m.depreciationLife = num(inputs, 'depreciationLife', 5); // chip-limited satellite life
 
     var launchShare = totalCapex > 0 ? launchCapex / totalCapex : 0;
+    var endAvailability = m.ramp[m.ramp.length - 1];
     m.derived = {
       mw: { label: 'Compute power', value: Format.trimZeros(computeMw.toFixed(1)) + ' MW', help: 'GPU electrical load in orbit' },
       mass: { label: 'Mass to orbit', value: Format.number(Math.round(totalMassKg / 1000)) + ' t', help: 'Total system mass launched' },
       dollarKg: { label: 'Launch cost', value: Format.currency(launchCostPerKg, m.currency) + '/kg', help: 'Assumed price to LEO — the swing variable' },
       launchShare: { label: 'Launch % of capex', value: Format.percent(launchShare), help: 'How launch-dominated the build is' },
+      peak: { label: 'Peak availability', value: Format.percent(peakUtilization), help: 'Best-case capacity — never 100% (pointing, eclipse, thermal duty-cycle)' },
+      endAvail: { label: replenish ? 'Held (replenished)' : 'Availability at year ' + m.years, value: Format.percent(endAvailability), help: replenish ? 'Capacity held flat by launching replacements' : 'Capacity left after ' + Format.percent(degradationRate) + '/yr degradation with no repair' },
+      maintenance: { label: 'Maintenance overhead', value: Format.percent(maintenanceOverheadPct), help: 'Annual non-energy upkeep as a share of orbital capex' },
       allInWatt: { label: 'All-in cost / W', value: Format.currency(totalCapex / Math.max(1, computeMw * 1e6), m.currency, 2), help: 'Total capex per watt of compute' }
     };
     m.notes = [
       'Orbital data center: solar-powered GPUs in LEO. Capex is launch-dominated, so economics track $/kg to orbit.',
       'No energy opex — solar is free and the vacuum is the heatsink (radiative cooling). This is the core space advantage.',
+      'Availability peaks at ' + Format.percent(peakUtilization) + ' — never 100% (attitude pointing, eclipse periods, thermal duty-cycle).',
+      'Maintenance overhead: ' + Format.percent(maintenanceOverheadPct) + ' of orbital capex per year for non-energy upkeep, spares planning, software, ground procedures and anomaly response.',
+      replenish
+        ? 'Replenishment ON: capacity held flat by launching ~' + Format.percent(degradationRate) + ' of the fleet each year — recurring opex, no revenue decay.'
+        : 'Replenishment OFF: no on-orbit repair, so capacity decays ' + Format.percent(degradationRate) + '/yr (solar degradation + GPU failures). Revenue bends down over the horizon.',
       'Google\'s 2025 study put the break-even vs ground energy near ~$200/kg to LEO; below that, orbit competes.',
       'Short depreciation (~5 yrs) reflects GPU-limited satellite life; on-orbit servicing is still immature.',
       'Figures are estimates from public 2025–26 concepts (Starcloud, Project Suncatcher) — validate before committing capital.'
@@ -285,9 +340,19 @@
     fields: [
       { key: 'sellableUnitsPerMw', label: 'Units / MW', type: 'number', default: 1000, min: 1, step: 10, help: 'Sellable GPU-equivalents per MW (~700 W each)' },
       { key: 'pricePerUnitHour', label: 'Price / unit-hour', type: 'currency', prefix: '$', default: 2.0, min: 0, step: 0.1, unit: '/hr', help: 'Billed rate per GPU-hour' },
-      { key: 'soldUtilization', label: 'Billed utilization', type: 'percent', default: 0.8, min: 0, max: 1, step: 1, help: 'Steady-state fraction of hours billed' },
-      { key: 'priceGrowth', label: 'Price growth', type: 'percent', default: 0.0, min: -0.2, step: 0.5, help: 'Annual price change (compute often deflates)' },
-      { key: 'fillMonths', label: 'Ramp period', type: 'number', default: 18, min: 1, step: 1, unit: 'mo', help: 'Months to reach full sold utilization' }
+      { key: 'priceGrowth', label: 'Price growth', type: 'percent', default: 0.0, min: -0.2, step: 0.5, help: 'Annual price change (compute often deflates)' }
+    ]
+  };
+
+  var orbitalUtilization = {
+    id: 'orbital-util', label: 'Utilization & maintenance', icon: '📈', scenarios: ['orbital-dc'],
+    fields: [
+      { key: 'soldUtilization', label: 'Billed utilization', type: 'percent', default: 0.8, min: 0, max: 1, step: 1, help: 'Steady-state fraction of available GPU-hours billed' },
+      { key: 'peakUtilization', label: 'Peak availability', type: 'percent', default: 0.9, min: 0, max: 1, step: 1, help: 'Best-case usable capacity after eclipse, pointing and thermal duty-cycle limits' },
+      { key: 'degradationRate', label: 'Annual degradation', type: 'percent', default: 0.06, min: 0, max: 0.5, step: 0.5, help: 'Annual capacity loss after deployment from solar degradation and hardware failures' },
+      { key: 'replenish', label: 'Replenishment', type: 'select', default: 0, options: [{ value: 0, label: 'No - capacity decays' }, { value: 1, label: 'Yes - launch replacements' }], help: 'Whether to add recurring replacement-launch opex to hold capacity flat' },
+      { key: 'fillMonths', label: 'Ramp period', type: 'number', default: 18, min: 1, step: 1, unit: 'mo', help: 'Months to reach peak orbital availability' },
+      { key: 'maintenanceOverheadPct', label: 'Maintenance overhead', type: 'percent', default: 0.02, min: 0, step: 0.25, help: 'Annual non-energy upkeep as % of orbital capex' }
     ]
   };
 
@@ -358,7 +423,7 @@
       { id: 'rocketlab', name: 'Rocket Lab', description: 'Electron + Neutron launch plus the Space Systems segment.' }
     ],
     groups: [
-      constellationGroup, launchEconGroup, orbitalRevenue, spaceOpexGroup,
+      constellationGroup, launchEconGroup, orbitalRevenue, orbitalUtilization, spaceOpexGroup,
       spacexRevenue, rocketlabRevenue, financeGroup
     ],
     presets: [

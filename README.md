@@ -54,6 +54,9 @@ The orbital DC and the two launch businesses are linked: the same **$/kg to
 orbit** that SpaceX and Rocket Lab sell is the swing variable that decides whether
 an orbital data center pencils out (Google's 2025 study put the break-even near
 ~$200/kg). Presets are calibrated to 2025–26 public figures and are estimates.
+The orbital DC case also models billed utilization separately from physical
+availability: capacity ramps to a peak, can degrade without replenishment, and
+carries annual maintenance overhead as a percentage of orbital capex.
 
 ## Architecture
 

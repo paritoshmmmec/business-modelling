@@ -300,6 +300,38 @@
     ok(rlo.kpis.npvProject > rhi.kpis.npvProject, r, 'lower $/kg → better NPV');
     ok(rhi.totalCapex > rlo.totalCapex, r, 'higher $/kg → more capex');
   });
+  test('orbital-dc: availability peaks below 100% and degrades without replenishment', function (r) {
+    var inputs = sdcDefaults();
+    inputs.peakUtilization = 0.90;
+    inputs.degradationRate = 0.10;
+    inputs.replenish = 0;
+    inputs.fillMonths = 12;
+    var model = sdc.compute(inputs, 'orbital-dc');
+    ok(model.ramp[2] < model.ramp[1], r, 'post-peak availability declines');
+    ok(model.ramp[0] <= 0.90, r, 'availability capped at peak');
+    var res = Engine.project(model);
+    ok(res.perYear[res.perYear.length - 1].revenue < res.perYear[1].revenue, r, 'revenue follows declining availability');
+  });
+  test('orbital-dc: replenishment holds capacity but adds replacement opex', function (r) {
+    var inputs = sdcDefaults();
+    inputs.peakUtilization = 0.90;
+    inputs.degradationRate = 0.10;
+    inputs.replenish = 1;
+    inputs.fillMonths = 12;
+    var model = sdc.compute(inputs, 'orbital-dc');
+    var hasReplenishment = model.opexItems.some(function (i) { return /Replenishment/.test(i.label); });
+    ok(hasReplenishment, r, 'replacement-launch opex present');
+    approx(model.ramp[1], model.ramp[model.ramp.length - 1], 1e-9, r, 'availability held flat after ramp');
+  });
+  test('orbital-dc: maintenance overhead scales with orbital capex', function (r) {
+    var inputs = sdcDefaults();
+    inputs.maintenanceOverheadPct = 0.05;
+    var model = sdc.compute(inputs, 'orbital-dc');
+    var totalCapex = model.capexItems.reduce(function (s, i) { return s + i.amount; }, 0);
+    var maintenance = model.opexItems.filter(function (i) { return /Maintenance overhead/.test(i.label); })[0];
+    ok(!!maintenance, r, 'maintenance overhead opex present');
+    approx(maintenance.amount, totalCapex * 0.05, 1, r, 'maintenance = pct of capex');
+  });
   test('spacex: $/kg derived = price ÷ payload', function (r) {
     var inputs = sdcDefaults();
     inputs.pricePerLaunch = 60000000;
